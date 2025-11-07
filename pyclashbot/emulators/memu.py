@@ -16,6 +16,7 @@ from pymemuc import PyMemuc, PyMemucError, VMInfo
 
 from pyclashbot.bot.nav import check_if_on_clash_main_menu
 from pyclashbot.emulators.base import BaseEmulatorController
+from pyclashbot.utils.image_handler import InvalidImageError, open_from_buffer
 
 # Debug configuration flags - set to True to enable verbose logging for specific areas
 DEBUG_CONFIGURATION = {
@@ -52,15 +53,6 @@ MEMU_CONFIGURATION: dict[str, str | int | float] = {
 }
 
 
-class InvalidImageError(Exception):
-    """Exception raised when an image is invalid"""
-
-    def __init__(self, message: str, path: str | None = None):
-        self.path = path
-        self.message = message
-        super().__init__(self.message)
-
-
 class MemuScreenCapture:
     def __init__(self, pmc):
         self.pmc = pmc
@@ -76,33 +68,7 @@ class MemuScreenCapture:
             image_data = base64.b64decode(image_b64)
         except (TypeError, ValueError, binascii.Error) as error:
             raise InvalidImageError("image_b64 is not a valid base64 string") from error
-        return self.open_from_buffer(image_data)
-
-    def open_from_buffer(
-        self,
-        image_data,
-    ):
-        """A method to read an image from a byte array
-        :param byte_array: the byte array to read the image from
-        :return: the image as a numpy array
-        :raises InvalidImageError: if the file is not a valid image
-        """
-        try:
-            im_arr = np.frombuffer(image_data, dtype=np.uint8)
-        except (BufferError, ValueError) as error:
-            raise InvalidImageError("image_data is not a valid buffer") from error
-        try:
-            img = cv2.imdecode(im_arr, cv2.IMREAD_COLOR)  # pylint: disable=no-member
-        except cv2.error as error:  # pylint: disable=catching-non-exception
-            # pylint: disable=bad-exception-cause
-            raise InvalidImageError("image_data bytes cannot be decoded") from error
-        if img is None or len(img) == 0 or len(img.shape) != 3 or img.shape[2] != 3:
-            raise InvalidImageError("image_data bytes are not a valid image")
-        # if np.all(img == 255) or np.all(img == 0):
-        #     raise InvalidImageError(
-        #         "image_data bytes are not a valid image. Image is all white or all black"
-        #     )
-        return img
+        return open_from_buffer(image_data)
 
     def __getitem__(self, vm_index) -> np.ndarray:
         if vm_index is None:
