@@ -1,13 +1,27 @@
 import time
+from typing import TYPE_CHECKING
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from pyclashbot.utils.logger import Logger
 
 
 class BaseEmulatorController:
     """
     Base class for emulator controllers.
     This class is used to define the interface for all emulator controllers.
+
+    Attributes:
+        logger: Logger instance for logging and UI interactions (set by subclasses)
+        installation_waiting: Flag to control installation waiting loop (set by subclasses)
+        current_package_name: Name of package being checked for installation (set by subclasses)
     """
+
+    # Type hints for attributes that subclasses must set
+    logger: "Logger"
+    installation_waiting: bool
+    current_package_name: str
 
     def __init__(self):
         raise NotImplementedError
@@ -103,39 +117,39 @@ class BaseEmulatorController:
     def _wait_for_clash_installation(self, package_name: str):
         """Wait for user to install Clash Royale using the logger action system"""
         self.current_package_name = package_name  # Store for retry logic
-        self.logger.show_temporary_action(  # type: ignore[attr-defined]
+        self.logger.show_temporary_action(
             message=f"{package_name} not installed - please install it and complete tutorial",
             action_text="Retry",
             callback=self._retry_installation_check,
         )
 
-        self.logger.log(f"[!] {package_name} not installed.")  # type: ignore[attr-defined]
-        self.logger.log("Please install it in the emulator, complete tutorial, then click Retry in the GUI")  # type: ignore[attr-defined]
+        self.logger.log(f"[!] {package_name} not installed.")
+        self.logger.log("Please install it in the emulator, complete tutorial, then click Retry in the GUI")
 
         # Wait for the callback to be triggered
-        self.installation_waiting = True  # type: ignore[attr-defined]
-        while self.installation_waiting:  # type: ignore[attr-defined]
+        self.installation_waiting = True
+        while self.installation_waiting:
             time.sleep(0.5)
 
-        self.logger.log("[+] Installation confirmed, continuing...")  # type: ignore[attr-defined]
+        self.logger.log("[+] Installation confirmed, continuing...")
         return True
 
     def _retry_installation_check(self):
         """Callback method triggered when user clicks Retry button"""
-        self.logger.change_status("Checking for Clash Royale installation...")  # type: ignore[attr-defined]
+        self.logger.change_status("Checking for Clash Royale installation...")
 
         # Check if app is now installed
         package_name = getattr(self, "current_package_name", "com.supercell.clashroyale")
 
         if self._is_package_installed(package_name):
             # Installation successful!
-            self.installation_waiting = False  # type: ignore[attr-defined]
-            self.logger.change_status("Installation complete - continuing...")  # type: ignore[attr-defined]
+            self.installation_waiting = False
+            self.logger.change_status("Installation complete - continuing...")
         else:
             # Still not installed, show the retry button again
-            self.logger.show_temporary_action(  # type: ignore[attr-defined]
+            self.logger.show_temporary_action(
                 message=f"{package_name} still not found - please install it and complete tutorial",
                 action_text="Retry",
                 callback=self._retry_installation_check,
             )
-            self.logger.log(f"[!] {package_name} still not installed. Please try again.")  # type: ignore[attr-defined]
+            self.logger.log(f"[!] {package_name} still not installed. Please try again.")
