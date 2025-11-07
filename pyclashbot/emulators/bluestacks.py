@@ -639,9 +639,13 @@ class BlueStacksEmulatorController(BaseEmulatorController):
             raise ValueError("Failed to decode screenshot image")
         return img
 
-    def start_app(self, package_name: str):
+    def _is_package_installed(self, package_name: str) -> bool:
+        """Check if a package is installed on the emulator using ADB"""
         res = self.adb("shell pm list packages")
-        if res.stdout and package_name not in res.stdout:
+        return bool(res.stdout and package_name in res.stdout)
+
+    def start_app(self, package_name: str):
+        if not self._is_package_installed(package_name):
             return self._wait_for_clash_installation(package_name)
         self.adb(f"shell monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
 
