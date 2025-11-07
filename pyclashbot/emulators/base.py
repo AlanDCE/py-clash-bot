@@ -115,7 +115,7 @@ class BaseEmulatorController:
         raise NotImplementedError
 
     def _wait_for_clash_installation(self, package_name: str):
-        """Wait for user to install Clash Royale using the logger action system"""
+        """Wait for user to install the specified package using the logger action system"""
         self.current_package_name = package_name  # Store for retry logic
         self.logger.show_temporary_action(
             message=f"{package_name} not installed - please install it and complete tutorial",
@@ -136,7 +136,7 @@ class BaseEmulatorController:
 
     def _retry_installation_check(self):
         """Callback method triggered when user clicks Retry button"""
-        self.logger.change_status("Checking for Clash Royale installation...")
+        self.logger.change_status("Checking for package installation...")
 
         # Check if app is now installed
         package_name = getattr(self, "current_package_name", "com.supercell.clashroyale")

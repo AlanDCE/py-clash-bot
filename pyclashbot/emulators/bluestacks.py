@@ -652,7 +652,7 @@ class BlueStacksEmulatorController(BaseEmulatorController):
     def _wait_for_clash_installation(self, package_name: str):
         self.current_package_name = package_name
         self.logger.show_temporary_action(
-            message="Clashroyal not installed - install the app and complete tutorial before retrying",
+            message="Clash Royale not installed - install the app and complete tutorial before retrying",
             action_text="Retry",
             callback=self._retry_installation_check,
         )
