@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 
 
@@ -84,3 +86,56 @@ class BaseEmulatorController:
         This method is used to start an app on the emulator.
         """
         raise NotImplementedError
+
+    def _is_package_installed(self, package_name: str) -> bool:
+        """
+        Check if a package is installed on the emulator.
+        Subclasses must implement this method.
+
+        Args:
+            package_name: The package name to check (e.g., "com.supercell.clashroyale")
+
+        Returns:
+            True if the package is installed, False otherwise
+        """
+        raise NotImplementedError
+
+    def _wait_for_clash_installation(self, package_name: str):
+        """Wait for user to install Clash Royale using the logger action system"""
+        self.current_package_name = package_name  # Store for retry logic
+        self.logger.show_temporary_action(  # type: ignore[attr-defined]
+            message=f"{package_name} not installed - please install it and complete tutorial",
+            action_text="Retry",
+            callback=self._retry_installation_check,
+        )
+
+        self.logger.log(f"[!] {package_name} not installed.")  # type: ignore[attr-defined]
+        self.logger.log("Please install it in the emulator, complete tutorial, then click Retry in the GUI")  # type: ignore[attr-defined]
+
+        # Wait for the callback to be triggered
+        self.installation_waiting = True  # type: ignore[attr-defined]
+        while self.installation_waiting:  # type: ignore[attr-defined]
+            time.sleep(0.5)
+
+        self.logger.log("[+] Installation confirmed, continuing...")  # type: ignore[attr-defined]
+        return True
+
+    def _retry_installation_check(self):
+        """Callback method triggered when user clicks Retry button"""
+        self.logger.change_status("Checking for Clash Royale installation...")  # type: ignore[attr-defined]
+
+        # Check if app is now installed
+        package_name = getattr(self, "current_package_name", "com.supercell.clashroyale")
+
+        if self._is_package_installed(package_name):
+            # Installation successful!
+            self.installation_waiting = False  # type: ignore[attr-defined]
+            self.logger.change_status("Installation complete - continuing...")  # type: ignore[attr-defined]
+        else:
+            # Still not installed, show the retry button again
+            self.logger.show_temporary_action(  # type: ignore[attr-defined]
+                message=f"{package_name} still not found - please install it and complete tutorial",
+                action_text="Retry",
+                callback=self._retry_installation_check,
+            )
+            self.logger.log(f"[!] {package_name} still not installed. Please try again.")  # type: ignore[attr-defined]

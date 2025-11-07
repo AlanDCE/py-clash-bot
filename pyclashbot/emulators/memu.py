@@ -9,7 +9,6 @@ import subprocess
 import time
 from os.path import join
 
-import cv2
 import numpy as np
 import psutil
 from pymemuc import PyMemuc, PyMemucError, VMInfo
@@ -1426,15 +1425,8 @@ class MemuEmulatorController(BaseEmulatorController):
             logger (Logger): Logger object.
 
         """
-        # Function implementation goes here
-
-        # get list of installed apps
-        installed_apps = self.pmc.get_app_info_list_vm(vm_index=self.vm_index)
-
-        # check list of installed apps for names containing base name
-        found = [app for app in installed_apps if package_name in app]
-
-        if not found:
+        # Check if app is installed
+        if not self._is_package_installed(package_name):
             return self._wait_for_clash_installation(package_name)
 
         # start Clash Royale
@@ -1442,47 +1434,11 @@ class MemuEmulatorController(BaseEmulatorController):
         self.logger.log("Successfully initialized Clash app")
         return True
 
-    def _wait_for_clash_installation(self, package_name: str):
-        """Wait for user to install Clash Royale using the logger action system"""
-        self.current_package_name = package_name  # Store for retry logic
-        self.logger.show_temporary_action(
-            message=f"{package_name} not installed - please install it and complete tutorial",
-            action_text="Retry",
-            callback=self._retry_installation_check,
-        )
-
-        self.logger.log(f"[!] {package_name} not installed.")
-        self.logger.log("Please install it in the emulator, complete tutorial, then click Retry in the GUI")
-
-        # Wait for the callback to be triggered
-        self.installation_waiting = True
-        while self.installation_waiting:
-            time.sleep(0.5)
-
-        self.logger.log("[+] Installation confirmed, continuing...")
-        return True
-
-    def _retry_installation_check(self):
-        """Callback method triggered when user clicks Retry button"""
-        self.logger.change_status("Checking for Clash Royale installation...")
-
-        # Check if app is now installed
-        package_name = getattr(self, "current_package_name", "com.supercell.clashroyale")
+    def _is_package_installed(self, package_name: str) -> bool:
+        """Check if a package is installed on the emulator using PyMemuc"""
         installed_apps = self.pmc.get_app_info_list_vm(vm_index=self.vm_index)
         found = [app for app in installed_apps if package_name in app]
-
-        if found:
-            # Installation successful!
-            self.installation_waiting = False
-            self.logger.change_status("Installation complete - continuing...")
-        else:
-            # Still not installed, show the retry button again
-            self.logger.show_temporary_action(
-                message=f"{package_name} still not found - please install it and complete tutorial",
-                action_text="Retry",
-                callback=self._retry_installation_check,
-            )
-            self.logger.log(f"[!] {package_name} still not installed. Please try again.")
+        return bool(found)
 
 
 if __name__ == "__main__":

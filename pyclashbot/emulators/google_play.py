@@ -543,54 +543,17 @@ class GooglePlayEmulatorController(BaseEmulatorController):
         """
         raise NotImplementedError
 
+    def _is_package_installed(self, package_name: str) -> bool:
+        """Check if a package is installed on the emulator using ADB"""
+        result = self.adb("shell pm list packages")
+        return bool(result.stdout and package_name in result.stdout)
+
     def start_app(self, package_name: str):
         # Check if the app is installed first
-        result = self.adb("shell pm list packages")
-        if result.stdout and package_name not in result.stdout:
+        if not self._is_package_installed(package_name):
             return self._wait_for_clash_installation(package_name)
 
         self.adb(f"shell monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
-
-    def _wait_for_clash_installation(self, package_name: str):
-        """Wait for user to install Clash Royale using the logger action system"""
-        self.current_package_name = package_name  # Store for retry logic
-        self.logger.show_temporary_action(
-            message=f"{package_name} not installed - please install it and complete tutorial",
-            action_text="Retry",
-            callback=self._retry_installation_check,
-        )
-
-        self.logger.log(f"[!] {package_name} not installed.")
-        self.logger.log("Please install it in the emulator, complete tutorial, then click Retry in the GUI")
-
-        # Wait for the callback to be triggered
-        self.installation_waiting = True
-        while self.installation_waiting:
-            time.sleep(0.5)
-
-        self.logger.log("[+] Installation confirmed, continuing...")
-        return True
-
-    def _retry_installation_check(self):
-        """Callback method triggered when user clicks Retry button"""
-        self.logger.change_status("Checking for Clash Royale installation...")
-
-        # Check if app is now installed
-        package_name = getattr(self, "current_package_name", "com.supercell.clashroyale")
-        result = self.adb("shell pm list packages")
-
-        if result.stdout and package_name in result.stdout:
-            # Installation successful!
-            self.installation_waiting = False
-            self.logger.change_status("Installation complete - continuing...")
-        else:
-            # Still not installed, show the retry button again
-            self.logger.show_temporary_action(
-                message=f"{package_name} still not found - please install it and complete tutorial",
-                action_text="Retry",
-                callback=self._retry_installation_check,
-            )
-            self.logger.log(f"[!] {package_name} still not installed. Please try again.")
 
     def debug_adb_connectivity(self):
         """
